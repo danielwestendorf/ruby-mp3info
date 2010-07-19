@@ -87,7 +87,8 @@ class Mp3Info
     "year"     => "TYE",
     "tracknum" => "TRK",
     "comments" => "COM",
-    "genre_s"  => "TCO"
+    "genre_s"  => "TCO",
+    "album_artist" => 'TPE2'
   }
 
   # for id3v2.3 and 2.4
@@ -98,7 +99,8 @@ class Mp3Info
     "year"     => "TYER",
     "tracknum" => "TRCK",
     "comments" => "COMM",
-    "genre_s"  => "TCON"
+    "genre_s"  => "TCON",
+    "album_artist" => 'TPE2'
   }
   
   # http://www.codeproject.com/audio/MPEGAudioInfo.asp
@@ -172,6 +174,45 @@ class Mp3Info
     open(filename,"rb") { |f|
       f.read(3) == "ID3"
     }
+  end
+  
+  def get_image_data
+    image_data = @tag2['APIC']
+    if image_data
+      image_data = image_data.unpack("c Z* c Z* a*")
+    else
+      raise "No Image Data Found!"
+    end
+    @image_mime_type = image_data[1]
+    @binary_image_data = image_data[4]
+    return nil
+  end
+
+  def get_binary_image_data
+    get_image_data unless @binary_image_data
+    if @binary_image_data.length < 1
+      raise "No Image Data Found"
+    else
+      return @binary_image_data
+    end
+  end
+
+  def get_image_mime_type
+    get_image_data unless @image_mime_type
+    if @image_mime_type.length < 1
+      raise "No Image Data Found"
+    else
+      return @image_mime_type.split("/")[1]
+    end
+  end
+
+  def save_image(path_to_image, filename)
+    mime_type = self.get_image_mime_type
+    image_data = self.get_binary_image_data
+    f = File.open(path_to_image + filename + "." + mime_type , 'wb')
+    f.write(image_data)
+    f.close
+    return true
   end
 
   # Remove id3v1 tag from +filename+
@@ -494,7 +535,7 @@ class Mp3Info
   def to_s
     s = "MPEG #{@mpeg_version} Layer #{@layer} #{@vbr ? "VBR" : "CBR"} #{@bitrate} Kbps #{@channel_mode} #{@samplerate} Hz length #{@length} sec. header #{@header.inspect} "
     s << "tag1: "+@tag1.inspect+"\n" if hastag1?
-    s << "tag2: "+@tag2.inspect+"\n" if hastag2?
+    #s << "tag2: "+@tag2.inspect+"\n" if hastag2?
     s
   end
 
